@@ -29,17 +29,9 @@ std::vector<Prediction> OptimizedPredictionCollector::collect_predictions(const 
     size_t num_trees = forest.get_trees().size();
     size_t num_samples = prediction_data->get_num_rows();
     
-    // std::vector<Prediction> predictions;
+    std::vector<Prediction> predictions;
     
-    // predictions.reserve(num_samples);
-    
-    // Use a multi-dimentional vector with tree_predictions
-    std::vector<std::vector<Prediction>> predictions_wtrees;
-    predictions_wtrees.resize(num_samples);
-    for (int i = 0; i < num_samples; i++) {
-        size_t ncolumns = num_trees+1;
-        predictions_wtrees[i].resize(ncolumns);
-    }
+    predictions.reserve(num_samples);
     
     for (size_t sample = 0; sample < num_samples; ++sample) {
         std::vector<double> average_value;
@@ -47,6 +39,10 @@ std::vector<Prediction> OptimizedPredictionCollector::collect_predictions(const 
         if (ci_group_size > 1) {
             leaf_values.resize(num_trees);
         }
+        
+        // Use a multi-dimentional vector with tree_predictions
+        std::vector<double> predictions_trees;
+        predictions_trees.resize(num_trees);
         
         // Create a list of weighted neighbors for this sample.
         uint num_leaves = 0;
@@ -69,17 +65,15 @@ std::vector<Prediction> OptimizedPredictionCollector::collect_predictions(const 
                 }
             }
             
-            // Output prediction value of trees
-            std::vector<double> point_prediction_tree = leaf_values[tree_index];
-            predictions_wtrees[sample][tree_index+1] = Prediction(point_prediction_tree);
+            // Save prediction value of trees: hack for regression trees
+            predictions_trees[tree_index] = prediction_values.get(node, 0);
         }
         
         // If this sample has no neighbors, then return placeholder predictions. Note
         // that this can only occur when honesty is enabled, and is expected to be rare.
         if (num_leaves == 0) {
             std::vector<double> temp(strategy->prediction_length(), NAN);
-            //predictions.push_back(Prediction(temp));
-            predictions_wtrees[sample][0] = Prediction(temp);
+            predictions.push_back(Prediction(temp));
             continue;
         }
         
@@ -92,13 +86,15 @@ std::vector<Prediction> OptimizedPredictionCollector::collect_predictions(const 
             variance_estimate = strategy->compute_variance(average_value, prediction_values, ci_group_size);
         }
         
-        Prediction prediction(point_prediction, variance_estimate);
+        // add leaf_values to prediction class
+        Prediction prediction(point_prediction, variance_estimate, predictions_trees);
         validate_prediction(sample, prediction);
-        //predictions.push_back(prediction);
-        predictions_wtrees[sample][0] = prediction;
+        predictions.push_back(prediction);
+        
+        // set this value in the prediction class
+        //predictions.set_tree_predictions = prediction;
     }
-    //return predictions;
-    return predictions_wtrees;
+    return predictions;
 }
 
 void OptimizedPredictionCollector::add_prediction_values(size_t node,
