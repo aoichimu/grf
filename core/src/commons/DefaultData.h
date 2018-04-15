@@ -29,63 +29,17 @@ public:
   DefaultData();
 
   DefaultData(double* data,
-       std::vector<std::string> variable_names,
        size_t num_rows,
        size_t num_cols);
 
-  ~DefaultData();
+  virtual ~DefaultData();
 
   double get(size_t row, size_t col) const;
 
   void reserve_memory();
   void set(size_t col, size_t row, double value, bool& error);
 
-  bool load_from_file(std::string filename);
-  bool load_from_whitespace_file(std::ifstream& input_file, std::string header_line);
-  bool load_from_other_file(std::ifstream& input_file, std::string header_line, char seperator);
-
-  void get_all_values(std::vector<double>& all_values, const std::vector<size_t>& samples, size_t var);
-
-  size_t get_index(size_t row, size_t col) const {
-    return index_data[col * num_rows + row];
-  }
-
-  double get_unique_data_value(size_t var, size_t index) const {
-    return unique_data_values[var][index];
-  }
-
-  size_t get_num_unique_data_values(size_t var) const {
-    return unique_data_values[var].size();
-  }
-
-  void sort();
-
-  const std::vector<std::string>& get_variable_names() const {
-    return variable_names;
-  }
-  size_t get_num_cols() const {
-    return num_cols;
-  }
-  size_t get_num_rows() const {
-    return num_rows;
-  }
-
-  size_t get_max_num_unique_values() const {
-    return max_num_unique_values;
-  }
-
 protected:
-  std::vector<std::string> variable_names;
-  size_t num_rows;
-  size_t num_rows_rounded;
-  size_t num_cols;
-
-  bool externalData;
-
-  size_t* index_data;
-  std::vector<std::vector<double>> unique_data_values;
-  size_t max_num_unique_values;
-
   double* data;
 
 private:

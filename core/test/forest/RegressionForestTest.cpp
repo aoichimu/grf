@@ -29,12 +29,11 @@ TEST_CASE("honest regression forests are shift invariant", "[regression, forest]
   // Run the original forest.
   Data* data = load_data("test/forest/resources/gaussian_data.csv");
   uint outcome_index = 10;
-  double alpha = 0.10;
 
-  ForestTrainer trainer = ForestTrainers::regression_trainer(data, outcome_index, alpha);
-  ForestTestUtilities::init_honest_trainer(trainer);
+  ForestTrainer trainer = ForestTrainers::regression_trainer(outcome_index);
+  ForestOptions options = ForestTestUtilities::default_honest_options();
 
-  Forest forest = trainer.train(data);
+  Forest forest = trainer.train(data, options);
   ForestPredictor predictor = ForestPredictors::regression_predictor(4, 1);
   std::vector<Prediction> predictions = predictor.predict_oob(forest, data);
 
@@ -45,10 +44,7 @@ TEST_CASE("honest regression forests are shift invariant", "[regression, forest]
     data->set(outcome_index, r, outcome + 1, error);
   }
 
-  ForestTrainer shifted_trainer = ForestTrainers::regression_trainer(data, outcome_index, alpha);
-  ForestTestUtilities::init_default_trainer(shifted_trainer);
-
-  Forest shifted_forest = trainer.train(data);
+  Forest shifted_forest = trainer.train(data, options);
   ForestPredictor shifted_predictor = ForestPredictors::regression_predictor(4, 1);
   std::vector<Prediction> shifted_predictions = shifted_predictor.predict_oob(shifted_forest, data);
 
@@ -65,7 +61,6 @@ TEST_CASE("honest regression forests are shift invariant", "[regression, forest]
   }
 
   REQUIRE(equal_doubles(delta / predictions.size(), 1, 1e-1));
-
   delete data;
 }
 
@@ -73,11 +68,12 @@ TEST_CASE("regression forests give reasonable variance estimates", "[regression,
   Data* data = load_data("test/forest/resources/gaussian_data.csv");
   uint outcome_index = 10;
   double alpha = 0.10;
+  double imbalance_penalty = 0.07;
 
-  ForestTrainer trainer = ForestTrainers::regression_trainer(data, outcome_index, alpha);
-  ForestTestUtilities::init_trainer(trainer, false, 2);
+  ForestTrainer trainer = ForestTrainers::regression_trainer(outcome_index);
+  ForestOptions options = ForestTestUtilities::default_options(false, 2);
 
-  Forest forest = trainer.train(data);
+  Forest forest = trainer.train(data, options);
   ForestPredictor predictor = ForestPredictors::regression_predictor(4, 2);
   std::vector<Prediction> predictions = predictor.predict_oob(forest, data);
 
@@ -91,3 +87,43 @@ TEST_CASE("regression forests give reasonable variance estimates", "[regression,
 
   delete data;
 }
+
+TEST_CASE("regression error estimates are shift invariant", "[regression, forest]") {
+  // Run the original forest.
+  Data* data = load_data("test/forest/resources/gaussian_data.csv");
+  uint outcome_index = 10;
+
+  ForestTrainer trainer = ForestTrainers::regression_trainer(outcome_index);
+  ForestOptions options = ForestTestUtilities::default_honest_options();
+
+  Forest forest = trainer.train(data, options);
+  ForestPredictor predictor = ForestPredictors::regression_predictor(4, 1);
+  std::vector<Prediction> predictions = predictor.predict_oob(forest, data);
+
+  // Shift each outcome by 1, and re-run the forest.
+  bool data_error;
+  for (size_t r = 0; r < data->get_num_rows(); r++) {
+    double outcome = data->get(r, outcome_index);
+    data->set(outcome_index, r, outcome + 1, data_error);
+  }
+
+  Forest shifted_forest = trainer.train(data, options);
+  ForestPredictor shifted_predictor = ForestPredictors::regression_predictor(4, 1);
+  std::vector<Prediction> shifted_predictions = shifted_predictor.predict_oob(shifted_forest, data);
+
+  REQUIRE(predictions.size() == shifted_predictions.size());
+  double delta = 0.0;
+  for (size_t i = 0; i < predictions.size(); i++) {
+    Prediction prediction = predictions[i];
+    Prediction shifted_prediction = shifted_predictions[i];
+
+    double error = prediction.get_error_estimates()[0];
+    double shifted_error = shifted_prediction.get_error_estimates()[0];
+
+    delta += shifted_error - error;
+  }
+
+  REQUIRE(equal_doubles(delta / predictions.size(), 0, 1e-1));
+  delete data;
+}
+

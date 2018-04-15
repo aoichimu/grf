@@ -23,33 +23,29 @@
 
 #include "catch.hpp"
 
-
 TEST_CASE("forests don't crash when there are fewer trees than threads", "[forest]") {
-  Data *data = load_data("test/forest/resources/gaussian_data.csv");
   uint outcome_index = 10;
-  double alpha = 0.10;
 
-  ForestTrainer trainer = ForestTrainers::regression_trainer(data, outcome_index, alpha);
+  ForestTrainer trainer = ForestTrainers::regression_trainer(outcome_index);
+  Data* data = load_data("test/forest/resources/gaussian_data.csv");
 
   uint mtry = 3;
   uint num_trees = 2;
   uint seed = 42;
   uint num_threads = 4;
   uint min_node_size = 1;
-  std::set<size_t> no_split_variables;
-  std::string split_select_weights_file = "";
-  bool sample_with_replacement = true;
-  std::string sample_weights_file = "";
+  uint ci_group_size = 2;
   double sample_fraction = 0.35;
   bool honesty = true;
-  uint ci_group_size = 2;
+  double alpha = 0.10;
+  double imbalance_penalty = 0.07;
+  std::vector<size_t> empty_clusters;
+  uint samples_per_cluster = 0;
 
-  trainer.init(mtry, num_trees, seed, num_threads,
-               min_node_size, no_split_variables, split_select_weights_file,
-               sample_with_replacement, sample_weights_file, sample_fraction,
-               honesty, ci_group_size);
+  ForestOptions options(num_trees, ci_group_size, sample_fraction, mtry, min_node_size, honesty,
+      alpha, imbalance_penalty, num_threads, seed, empty_clusters, samples_per_cluster);
 
-  Forest forest = trainer.train(data);
+  Forest forest = trainer.train(data, options);
   ForestPredictor predictor = ForestPredictors::regression_predictor(4, 2);
   predictor.predict_oob(forest, data);
   delete data;

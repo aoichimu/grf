@@ -26,12 +26,17 @@ install.packages("grf")
 Any published release can also be installed from source:
 
 ```R
-install.packages("https://raw.github.com/swager/grf/master/releases/grf_0.9.3.tar.gz", repos = NULL, type = "source")
+install.packages("https://raw.github.com/swager/grf/master/releases/grf_0.9.6.tar.gz", repos = NULL, type = "source")
 ```
 
 Note that to install from source, a compiler that implements C++11 is required (clang 3.3 or higher, or g++ 4.8 or higher). If installing on Windows, the RTools toolchain is also required.
 
+
 ### Usage Examples
+
+The following script demonstrates how to use GRF for heterogeneous treatment effect estimation. For examples
+of how to use types of forest, as for quantile regression and causal effect estimation using instrumental
+variables, please consult the R documentation on the relevant forest methods (quantile_forest, instrumental_forest, etc.).
 
 ```R
 library(grf)
@@ -51,12 +56,12 @@ plot(X.test[,1], tau.hat$predictions, ylim = range(tau.hat$predictions, 0, 2), x
 lines(X.test[,1], pmax(0, X.test[,1]), col = 2, lty = 2)
 
 # Estimate the conditional average treatment effect on the full sample (CATE).
-estimate_average_effect(tau.forest, target.sample = "all")
+average_treatment_effect(tau.forest, target.sample = "all")
 
 # Estimate the conditional average treatment effect on the treated sample (CATT).
 # Here, we don't expect much difference between the CATE and the CATT, since
 # treatment assignment was randomized.
-estimate_average_effect(tau.forest, target.sample = "treated")
+average_treatment_effect(tau.forest, target.sample = "treated")
 
 # Add confidence intervals for heterogeneous treatment effects; growing more trees is now recommended.
 tau.forest = causal_forest(X, Y, W, num.trees = 4000)
@@ -68,8 +73,6 @@ lines(X.test[,1], tau.hat$predictions - 1.96 * sigma.hat, col = 1, lty = 2)
 lines(X.test[,1], pmax(0, X.test[,1]), col = 2, lty = 1)
 ```
 
-For examples on how to use other types of forest, including those for [quantile regression](documentation/quantile_examples.md) and causal effect estimation using instrumental variables, please see the `documentation` directory.
-
 ### Developing
 
 In addition to providing out-of-the-box forests for quantile regression and causal effect estimation, GRF provides a framework for creating forests tailored to new statistical tasks. If you'd like to develop using GRF, please consult the [development guide](DEVELOPING.md).
@@ -77,5 +80,5 @@ In addition to providing out-of-the-box forests for quantile regression and caus
 ### References
 
 Susan Athey, Julie Tibshirani and Stefan Wager.
-<b>Generalized Random Forests</b>, 2016.
+<b>Generalized Random Forests</b>, <i>Annals of Statistics</i>, forthcoming.
 [<a href="https://arxiv.org/abs/1610.01271">arxiv</a>]

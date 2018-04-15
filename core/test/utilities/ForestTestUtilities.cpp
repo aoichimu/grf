@@ -18,30 +18,27 @@
 #include "utilities/ForestTestUtilities.h"
 #include "forest/ForestTrainer.h"
 
-void ForestTestUtilities::init_default_trainer(ForestTrainer &trainer) {
-  init_trainer(trainer, false, 1);
+ForestOptions ForestTestUtilities::default_options() {
+  return default_options(false, 1);
 }
 
-void ForestTestUtilities::init_honest_trainer(ForestTrainer& trainer) {
-  init_trainer(trainer, true, 1);
+ForestOptions ForestTestUtilities::default_honest_options() {
+  return default_options(true, 1);
 }
 
-void ForestTestUtilities::init_trainer(ForestTrainer& trainer,
-                                       bool honesty,
-                                       uint ci_group_size) {
-  uint mtry = 3;
+ForestOptions ForestTestUtilities::default_options(bool honesty,
+                                                   uint ci_group_size) {
   uint num_trees = 50;
-  uint seed = 42;
-  uint num_threads = 4;
-  uint min_node_size = 1;
-  std::set<size_t> no_split_variables;
-  std::string split_select_weights_file = "";
-  bool sample_with_replacement = true;
-  std::string sample_weights_file = "";
   double sample_fraction = ci_group_size > 1 ? 0.35 : 0.7;
+  uint mtry = 3;
+  uint min_node_size = 1;
+  double alpha = 0.0;
+  double imbalance_penalty = 0.0;
+  std::vector<size_t> empty_clusters;
+  uint samples_per_cluster = 0;
+  uint num_threads = 4;
+  uint seed = 42;
 
-  trainer.init(mtry, num_trees, seed, num_threads,
-               min_node_size, no_split_variables, split_select_weights_file,
-               sample_with_replacement, sample_weights_file, sample_fraction,
-               honesty, ci_group_size);
+  return ForestOptions(num_trees, ci_group_size, sample_fraction, mtry, min_node_size, honesty,
+      alpha, imbalance_penalty, num_threads, seed, empty_clusters, samples_per_cluster);
 }

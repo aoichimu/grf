@@ -23,42 +23,22 @@
 
 class Prediction {
 public:
-    Prediction(const std::vector<double>& predictions);
-    Prediction(const std::vector<double>& predictions,
-               const std::vector<double>& variance_estimates);
-    
-    Prediction(const std::vector<double>& predictions,
-               const std::vector<double>& variance_estimates,
-               const std::vector<double>& predictions_trees);
-    
-    const std::vector<double>& get_predictions() const {
-        return predictions;
-    }
-    
-    const std::vector<double>& get_variance_estimates() const {
-        return variance_estimates;
-    }
-    
-    const bool contains_variance_estimates() const {
-        return !variance_estimates.empty();
-    }
-    
-    const size_t size() const {
-        return predictions.size();
-    }
-    
-    const std::vector<double>& get_tree_predictions() const {
-        return predictions_trees;
-    }
-    
-    const size_t forest_size() const {
-        return predictions_trees.size();
-    }
-    
+  Prediction(const std::vector<double>& predictions);
+  Prediction(const std::vector<double>& predictions,
+             const std::vector<double>& variance_estimates,
+             const std::vector<double>& error_estimates);
+
+  const std::vector<double>& get_predictions() const;
+  const std::vector<double>& get_variance_estimates() const;
+  const std::vector<double>& get_error_estimates() const;
+  const bool contains_variance_estimates() const;
+  const bool contains_error_estimates() const;
+  const size_t size() const;
+
 private:
-    std::vector<double> predictions;
-    std::vector<double> variance_estimates;
-    std::vector<double> predictions_trees;
+  std::vector<double> predictions;
+  std::vector<double> variance_estimates;
+  std::vector<double> error_estimates;
 };
 
 

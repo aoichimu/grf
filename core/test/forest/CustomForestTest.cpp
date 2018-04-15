@@ -29,11 +29,10 @@ TEST_CASE("custom forests predict 0 by default", "[custom, forest]") {
   // Train an honest custom forest.
   Data* data = load_data("test/forest/resources/gaussian_data.csv");
   uint outcome_index = 10;
-  double alpha = 0.0;
 
-  ForestTrainer trainer = ForestTrainers::custom_trainer(data, outcome_index, alpha);
-  ForestTestUtilities::init_honest_trainer(trainer);
-  Forest forest = trainer.train(data);
+  ForestTrainer trainer = ForestTrainers::custom_trainer(outcome_index);
+  ForestOptions options = ForestTestUtilities::default_honest_options();
+  Forest forest = trainer.train(data, options);
 
   // Predict on the same data.
   ForestPredictor predictor = ForestPredictors::custom_predictor(4);

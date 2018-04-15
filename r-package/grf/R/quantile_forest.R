@@ -19,14 +19,20 @@
 #'                  getting accurate predictions.
 #' @param num.threads Number of threads used in training. If set to NULL, the software
 #'                    automatically selects an appropriate amount.
-#' @param min.node.size Minimum number of observations in each tree leaf.
-#' @param seed The seed of the c++ random number generator.
-#' @param honesty Should honest splitting (i.e., sub-sample splitting) be used?
-#' @param alpha Maximum imbalance of a split.
+#' @param min.node.size A target for the minimum number of observations in each tree leaf. Note that nodes
+#'                      with size smaller than min.node.size can occur, as in the original randomForest package.
+#' @param honesty Whether or not honest splitting (i.e., sub-sample splitting) should be used.
+#' @param alpha A tuning parameter that controls the maximum imbalance of a split.
+#' @param imbalance.penalty A tuning parameter that controls how harshly imbalanced splits are penalized.
+#' @param seed The seed for the C++ random number generator.
+#' @param clusters Vector of integers or factors specifying which cluster each observation corresponds to.
+#' @param samples_per_cluster If sampling by cluster, the number of observations to be sampled from
+#'                            each cluster. Must be less than the size of the smallest cluster. If set to NULL
+#'                            software will set this value to the size of the smallest cluster.
 #'
 #' @return A trained quantile forest object.
 #'
-#' @examples
+#' @examples \dontrun{
 #' # Generate data.
 #' n = 50; p = 10
 #' X = matrix(rnorm(n*p), n, p)
@@ -49,13 +55,14 @@
 #' 
 #' # Make predictions for the desired quantiles.
 #' q.hat = predict(meins.forest, X.test, quantiles=c(0.1, 0.5, 0.9))
+#' }
 #' 
 #' @export
 quantile_forest <- function(X, Y, quantiles = c(0.1, 0.5, 0.9), regression.splitting = FALSE,
-                            sample.fraction = 0.5, mtry = ceiling(2*ncol(X)/3), num.trees = 2000,
-                            num.threads = NULL, min.node.size = NULL, seed = NULL, alpha = 0.05,
-                            honesty = TRUE) {
-    
+                            sample.fraction = 0.5, mtry = NULL, num.trees = 2000,
+                            num.threads = NULL, min.node.size = NULL, honesty = TRUE,
+                            alpha = 0.05, imbalance.penalty = 0.0, seed = NULL,
+                            clusters = NULL, samples_per_cluster = NULL) {
     if (!is.numeric(quantiles) | length(quantiles) < 1) {
         stop("Error: Must provide numeric quantiles")
     } else if (min(quantiles) <= 0 | max(quantiles) >= 1) {
@@ -70,24 +77,21 @@ quantile_forest <- function(X, Y, quantiles = c(0.1, 0.5, 0.9), regression.split
     min.node.size <- validate_min_node_size(min.node.size)
     sample.fraction <- validate_sample_fraction(sample.fraction)
     seed <- validate_seed(seed)
+    clusters <- validate_clusters(clusters, X)
+    samples_per_cluster <- validate_samples_per_cluster(samples_per_cluster, clusters)
     
-    no.split.variables <- numeric(0)
-    sample.with.replacement <- FALSE
-    verbose <- FALSE
-    keep.inbag <- FALSE
-    
-    input.data <- as.matrix(cbind(X, Y))
-    variable.names <- c(colnames(X), "outcome")
-    outcome.index <- ncol(input.data)
+    data <- create_data_matrices(X, Y)
+    outcome.index <- ncol(X) + 1
 
     ci.group.size <- 1
     
-    forest <- quantile_train(quantiles, regression.splitting, input.data, outcome.index,
-        variable.names, mtry, num.trees, verbose, num.threads, min.node.size, sample.with.replacement,
-        keep.inbag, sample.fraction, no.split.variables, seed, honesty, ci.group.size, alpha)
+    forest <- quantile_train(quantiles, regression.splitting, data$default, data$sparse,
+        outcome.index, mtry, num.trees, num.threads, min.node.size, sample.fraction, seed,
+        honesty, ci.group.size, alpha, imbalance.penalty, clusters, samples_per_cluster)
     
-    forest[["original.data"]] <- input.data
-    forest[["feature.indices"]] <- 1:ncol(X)
+    forest[["X.orig"]] <- X
+    forest[["clusters"]] <- clusters
+    
     class(forest) <- c("quantile_forest", "grf")
     forest
 }
@@ -108,7 +112,7 @@ quantile_forest <- function(X, Y, quantiles = c(0.1, 0.5, 0.9), regression.split
 #'
 #' @return Predictions at each test point for each desired quantile.
 #'
-#' @examples
+#' @examples \dontrun{
 #' # Train a quantile forest.
 #' n = 50; p = 10
 #' X = matrix(rnorm(n*p), n, p)
@@ -122,6 +126,7 @@ quantile_forest <- function(X, Y, quantiles = c(0.1, 0.5, 0.9), regression.split
 #' X.test = matrix(0, 101, p)
 #' X.test[,1] = seq(-2, 2, length.out = 101)
 #' q.pred = predict(q.forest, X.test)
+#' }
 #'
 #' @export
 predict.quantile_forest <- function(object,
@@ -136,17 +141,14 @@ predict.quantile_forest <- function(object,
     }
     
     num.threads <- validate_num_threads(num.threads)
-    variable.names <- character(0)
     
-    forest.short <- object[-which(names(object) == "original.data")]
+    forest.short <- object[-which(names(object) == "X.orig")]
     
     if (!is.null(newdata)) {
-        input.data <- as.matrix(cbind(newdata, NA))
-        quantile_predict(forest.short, quantiles, input.data, variable.names, 
-                         num.threads)
+        data <- create_data_matrices(newdata)
+        quantile_predict(forest.short, quantiles, data$default, data$sparse, num.threads)
     } else {
-        input.data <- object[["original.data"]]
-        quantile_predict_oob(forest.short, quantiles, input.data, variable.names, 
-                             num.threads)
+        data <- create_data_matrices(object[["X.orig"]])
+        quantile_predict_oob(forest.short, quantiles, data$default, data$sparse, num.threads)
     }
 }

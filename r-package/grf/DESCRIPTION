@@ -1,11 +1,12 @@
 Package: grf
 Title: Generalized Random Forests (Beta)
-Version: 0.9.3
+Version: 0.9.6
 Author: Julie Tibshirani [aut, cre],
     Susan Athey [aut],
     Stefan Wager [aut],
-    Marvin Wright [ctb],
-    all contributors to the included version of Eigen [ctb]
+    Rina Friedberg [ctb],
+    Luke Miner [ctb],
+    Marvin Wright [ctb]
 BugReports: https://github.com/swager/grf/issues
 Maintainer: Julie Tibshirani <jtibs@cs.stanford.edu>
 Description: A pluggable package for forest-based statistical estimation and inference.
@@ -14,13 +15,17 @@ Description: A pluggable package for forest-based statistical estimation and inf
     variables). This package is currently in beta, and we expect to make continual
     improvements to its performance and usability.
 Depends:
-    R (>= 3.3.1)
+    R (>= 3.3.0)
 License: GPL-3
-LinkingTo: Rcpp
+LinkingTo: Rcpp, RcppEigen
 Imports:
-    Rcpp (>= 0.12.10)
-RoxygenNote: 6.0.1
+    DiceKriging,
+    Matrix,
+    methods,
+    Rcpp (>= 0.12.15),
+    sandwich (>= 2.4-0)
+RoxygenNote: 6.0.1.9000
 Suggests:
-    sandwich, testthat
+    testthat
 SystemRequirements: GNU make
 URL: https://github.com/swager/grf
